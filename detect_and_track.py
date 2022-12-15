@@ -74,9 +74,9 @@ def draw_boxes(img, bbox, identities=None, categories=None, names=None,offset=(0
         label = str(id) + ":"+ names[cat]
         (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
         cv2.rectangle(img, (x1, y1), (x2, y2), (255,0,20), 2)
-        #cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1), (255,144,30), -1)
-        #cv2.putText(img, label, (x1, y1 - 5),cv2.FONT_HERSHEY_SIMPLEX,
-         #           0.6, [255, 255, 255], 1)
+        cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1), (255,144,30), -1)
+        cv2.putText(img, label, (x1, y1 - 5),cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6, [255, 255, 255], 1)
         # cv2.circle(img, data, 6, color,-1)
         # c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
         midpoint_x = x1 + ((x2 - x1) / 2)
@@ -316,10 +316,11 @@ def detect(save_img=False):
 
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
-        #print(f"Results saved to {save_dir}{s}")
+        # print(f"Results saved to {save_dir}{s}")
 
     print(f'Done. ({time.time() - t0:.3f}s)')
-    print('Bees In {} and Bees Out {}'.format(len(array_ids_in), len(array_ids_out)))
+    print(f'Bees In:{len(array_ids_in)}')
+    print(f'Bees Out:{len(array_ids_out)}')
 
 
 if __name__ == '__main__':
