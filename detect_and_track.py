@@ -38,10 +38,9 @@ modulo_counting_IN = 0
 counting_bees_out = 0
 modulo_counting_OUT = 0
 
-"""" Calculates the relative bounding box from absolute pixel values. """
-
 
 def bbox_rel(*xyxy):
+    """Calculates the relative bounding box from absolute pixel values. """
     bbox_left = min([xyxy[0].item(), xyxy[2].item()])
     bbox_top = min([xyxy[1].item(), xyxy[3].item()])
     bbox_w = abs(xyxy[0].item() - xyxy[2].item())
@@ -53,47 +52,37 @@ def bbox_rel(*xyxy):
     return x_c, y_c, w, h
 
 
-"""Function to Draw Bounding boxes"""
-
-
 def draw_boxes(img, bbox: np.ndarray, identities=None, categories=None, names=None, offset=(0, 0)):
-    counter = 0
+    """Function to Draw Bounding boxes"""
+    print(bbox)
+    print(identities)
     for i, box in enumerate(bbox):
         x1, y1, x2, y2 = [int(i) for i in box]
-        id = int(identities[i]) if identities is not None else 0
-        if id == 0:
-            print(f'Got 0 id, {counter=}')
+        bee_id = int(identities[i]) if identities is not None else 0
 
-        midpoint_x = x1 + ((x2 - x1) / 2)
         midpoint_y = y1 + ((y2 - y1) / 2)
-        center_point = (int(midpoint_x), int(midpoint_y))
 
         if midpoint_y <= area1_pointA[1]:
-            midpoint_color = (0, 255, 0)
             if len(array_ids_A) > 0:
-                if id not in array_ids_A:
-                    array_ids_A.append(id)
+                if bee_id not in array_ids_A:
+                    array_ids_A.append(bee_id)
             else:
-                array_ids_A.append(id)
+                array_ids_A.append(bee_id)
 
-            if id in array_ids_C:
-                array_ids_in.append(id)
-                array_ids_C.remove(id)
+            if bee_id in array_ids_C:
+                array_ids_in.append(bee_id)
+                array_ids_C.remove(bee_id)
 
         else:
-            midpoint_color = (255, 255, 255)
             if len(array_ids_C) > 0:
-                if id not in array_ids_C:
-                    array_ids_C.append(id)
+                if bee_id not in array_ids_C:
+                    array_ids_C.append(bee_id)
             else:
-                array_ids_C.append(id)
+                array_ids_C.append(bee_id)
 
-            if id in array_ids_A:
-                array_ids_out.append(id)
-                array_ids_A.remove(id)
-
-        cv2.circle(img, center_point, radius=1, color=midpoint_color, thickness=2)
-    return img
+            if bee_id in array_ids_A:
+                array_ids_out.append(bee_id)
+                array_ids_A.remove(bee_id)
 
 
 # ..............................................................................
