@@ -1,42 +1,36 @@
-import os
-import cv2
-import time
-import torch
-import argparse
 from pathlib import Path
-from numpy import random
 from random import randint
+
+import cv2
+import torch
 import torch.backends.cudnn as cudnn
+from numpy import random
 
 from models.experimental import attempt_load
-from utils.datasets import LoadStreams, LoadImages
-from utils.general import check_img_size, check_requirements, \
-                check_imshow, non_max_suppression, apply_classifier, \
-                scale_coords, xyxy2xywh, strip_optimizer, set_logging, \
-                increment_path
-from utils.plots import plot_one_box
-from utils.torch_utils import select_device, load_classifier, \
-                time_synchronized, TracedModel
-from utils.download_weights import download
-
-#For SORT tracking
-import skimage
+# For SORT tracking
 from sort import *
+from utils.datasets import LoadStreams, LoadImages
+from utils.download_weights import download
+from utils.general import check_img_size, check_imshow, non_max_suppression, apply_classifier, \
+    scale_coords, strip_optimizer, set_logging, \
+    increment_path
+from utils.torch_utils import select_device, load_classifier, \
+    time_synchronized, TracedModel
 
-#............................... Tracker Functions ............................
+# ............................... Tracker Functions ............................
 """ Random created palette"""
 palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
 
-area1_pointA = (210,350)
-area1_pointB = (1000,350)
-#area1_pointC = (210,450)
-#area1_pointD = (1000,450)
+area1_pointA = (210, 350)
+area1_pointB = (1000, 350)
+# area1_pointC = (210,450)
+# area1_pointD = (1000,450)
 
 
-#vehicles total counting variables
+# vehicles total counting variables
 array_ids_A = []
-array_ids_in= []
-array_ids_out= []
+array_ids_in = []
+array_ids_out = []
 array_ids_C = []
 COUNTING_IN = 0
 modulo_counting_IN = 0
@@ -44,10 +38,9 @@ modulo_counting_IN = 0
 counting_bees_out = 0
 modulo_counting_OUT = 0
 
-
-
-
 """" Calculates the relative bounding box from absolute pixel values. """
+
+
 def bbox_rel(*xyxy):
     bbox_left = min([xyxy[0].item(), xyxy[2].item()])
     bbox_top = min([xyxy[1].item(), xyxy[3].item()])
@@ -61,33 +54,23 @@ def bbox_rel(*xyxy):
 
 
 """Function to Draw Bounding boxes"""
-def draw_boxes(img, bbox, identities=None, categories=None, names=None,offset=(0, 0)):
+
+
+def draw_boxes(img, bbox: np.ndarray, identities=None, categories=None, names=None, offset=(0, 0)):
     for i, box in enumerate(bbox):
         x1, y1, x2, y2 = [int(i) for i in box]
-        x1 += offset[0]
-        x2 += offset[0]
-        y1 += offset[1]
-        y2 += offset[1]
-        cat = int(categories[i]) if categories is not None else 0
-        id = int(identities[i]) if identities is not None else 0
-        data = (int((box[0]+box[2])/2),(int((box[1]+box[3])/2)))
-        label = str(id) + ":"+ names[cat]
-        (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
-        cv2.rectangle(img, (x1, y1), (x2, y2), (255,0,20), 2)
-        cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1), (255,144,30), -1)
-        cv2.putText(img, label, (x1, y1 - 5),cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6, [255, 255, 255], 1)
-        # cv2.circle(img, data, 6, color,-1)
-        # c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+        print(f'{x1}{y1}{x2}{y2}')
+        x1 += 0
+        x2 += 0
+        y1 += 0
+        y2 += 0
         midpoint_x = x1 + ((x2 - x1) / 2)
         midpoint_y = y1 + ((y2 - y1) / 2)
         center_point = (int(midpoint_x), int(midpoint_y))
 
-
         if midpoint_y <= area1_pointA[1]:
-
             midpoint_color = (0, 255, 0)
-            if len(array_ids_A)>0:
+            if len(array_ids_A) > 0:
                 if id not in array_ids_A:
                     array_ids_A.append(id)
             else:
@@ -97,9 +80,8 @@ def draw_boxes(img, bbox, identities=None, categories=None, names=None,offset=(0
                 array_ids_in.append(id)
                 array_ids_C.remove(id)
 
-        if midpoint_y > area1_pointA[1]:
+        else:
             midpoint_color = (255, 255, 255)
-
             if len(array_ids_C) > 0:
                 if id not in array_ids_C:
                     array_ids_C.append(id)
@@ -111,9 +93,10 @@ def draw_boxes(img, bbox, identities=None, categories=None, names=None,offset=(0
                 array_ids_A.remove(id)
 
         cv2.circle(img, center_point, radius=1, color=midpoint_color, thickness=2)
-
     return img
-#..............................................................................
+
+
+# ..............................................................................
 
 
 def detect(save_img=False):
@@ -122,16 +105,15 @@ def detect(save_img=False):
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
 
-
-    #.... Initialize SORT .... 
-    #......................... 
-    sort_max_age = 5 
+    # .... Initialize SORT ....
+    # .........................
+    sort_max_age = 5
     sort_min_hits = 2
     sort_iou_thresh = 0.2
     sort_tracker = Sort(max_age=sort_max_age,
-                       min_hits=sort_min_hits,
-                       iou_threshold=sort_iou_thresh) 
-    #......................... 
+                        min_hits=sort_min_hits,
+                        iou_threshold=sort_iou_thresh)
+    # .........................
     # Directories
     save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
@@ -179,16 +161,16 @@ def detect(save_img=False):
 
     t0 = time.time()
 
-    #........Rand Color for every trk.......
+    # ........Rand Color for every trk.......
     rand_color_list = []
-    for i in range(0,5005):
+    for i in range(0, 5005):
         r = randint(0, 255)
         g = randint(0, 255)
         b = randint(0, 255)
         rand_color = (r, g, b)
         rand_color_list.append(rand_color)
-    #.........................
-   
+    # .........................
+
     for path, img, im0s, vid_cap in dataset:
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -197,7 +179,8 @@ def detect(save_img=False):
             img = img.unsqueeze(0)
 
         # Warmup
-        if device.type != 'cpu' and (old_img_b != img.shape[0] or old_img_h != img.shape[2] or old_img_w != img.shape[3]):
+        if device.type != 'cpu' and (
+                old_img_b != img.shape[0] or old_img_h != img.shape[2] or old_img_w != img.shape[3]):
             old_img_b = img.shape[0]
             old_img_h = img.shape[2]
             old_img_w = img.shape[3]
@@ -237,18 +220,18 @@ def detect(save_img=False):
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                #..................USE TRACK FUNCTION....................
-                #pass an empty array to sort
-                dets_to_sort = np.empty((0,6))
-                
+                # ..................USE TRACK FUNCTION....................
+                # pass an empty array to sort
+                dets_to_sort = np.empty((0, 6))
+
                 # NOTE: We send in detected object class too
-                for x1,y1,x2,y2,conf,detclass in det.cpu().detach().numpy():
-                    dets_to_sort = np.vstack((dets_to_sort, 
-                                np.array([x1, y1, x2, y2, conf, detclass])))
-                
+                for x1, y1, x2, y2, conf, detclass in det.cpu().detach().numpy():
+                    dets_to_sort = np.vstack((dets_to_sort,
+                                              np.array([x1, y1, x2, y2, conf, detclass])))
+
                 # Run SORT
                 tracked_dets = sort_tracker.update(dets_to_sort)
-                tracks =sort_tracker.getTrackers()
+                tracks = sort_tracker.getTrackers()
 
                 '''
                 #loop over tracks
@@ -264,19 +247,18 @@ def detect(save_img=False):
                                         if i < len(track.centroidarr)-1 ]
                 '''
                 # draw boxes for visualization
-                if len(tracked_dets)>0:
-                    bbox_xyxy = tracked_dets[:,:4]
+                if len(tracked_dets) > 0:
+                    bbox_xyxy = tracked_dets[:, :4]
                     identities = tracked_dets[:, 8]
                     categories = tracked_dets[:, 4]
                     draw_boxes(im0, bbox_xyxy, identities, categories, names)
-                #........................................................
-                
+                # ........................................................
+
             # Print time (inference + NMS)
             print(f'{s}Done. ({(1E3 * (t2 - t1)):.1f}ms) Inference, ({(1E3 * (t3 - t2)):.1f}ms) NMS')
 
-
             cv2.line(im0, area1_pointA, area1_pointB, (0, 255, 255), 2)
-            #cv2.line(im0, area1_pointC, area1_pointD, (0, 255, 255), 2)
+            # cv2.line(im0, area1_pointC, area1_pointD, (0, 255, 255), 2)
 
             color = (0, 255, 255)
             thickness = 2
@@ -285,14 +267,16 @@ def detect(save_img=False):
             org_1 = (100, 180)
             org_2 = (100, 550)
 
-            cv2.putText(im0, 'Bees IN = ' + str(len(array_ids_in)), org_1, font, fontScale, color, thickness, cv2.LINE_AA)
-            cv2.putText(im0, 'Bees OUT = ' + str(len(array_ids_out)), org_2, font, fontScale, color, thickness, cv2.LINE_AA)
+            cv2.putText(im0, 'Bees IN = ' + str(len(array_ids_in)), org_1, font, fontScale, color, thickness,
+                        cv2.LINE_AA)
+            cv2.putText(im0, 'Bees OUT = ' + str(len(array_ids_out)), org_2, font, fontScale, color, thickness,
+                        cv2.LINE_AA)
             # Stream results
             if view_img:
                 cv2.imshow(str(p), im0)
                 if cv2.waitKey(1) == ord('q'):  # q to quit
-                  cv2.destroyAllWindows()
-                  raise StopIteration
+                    cv2.destroyAllWindows()
+                    raise StopIteration
 
             # Save results (image with detections)
             if save_img:
@@ -348,7 +332,7 @@ if __name__ == '__main__':
     parser.set_defaults(download=True)
     opt = parser.parse_args()
     print(opt)
-    #check_requirements(exclude=('pycocotools', 'thop'))
+    # check_requirements(exclude=('pycocotools', 'thop'))
     if opt.download and not os.path.exists(opt.weights[0]):
         print('Model weights not found. Attempting to download now...')
         download('./')
