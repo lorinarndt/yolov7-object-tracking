@@ -57,13 +57,13 @@ def bbox_rel(*xyxy):
 
 
 def draw_boxes(img, bbox: np.ndarray, identities=None, categories=None, names=None, offset=(0, 0)):
+    counter = 0
     for i, box in enumerate(bbox):
         x1, y1, x2, y2 = [int(i) for i in box]
-        print(f'{x1}{y1}{x2}{y2}')
-        x1 += 0
-        x2 += 0
-        y1 += 0
-        y2 += 0
+        id = int(identities[i]) if identities is not None else 0
+        if id == 0:
+            print(f'Got 0 id, {counter=}')
+
         midpoint_x = x1 + ((x2 - x1) / 2)
         midpoint_y = y1 + ((y2 - y1) / 2)
         center_point = (int(midpoint_x), int(midpoint_y))
