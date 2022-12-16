@@ -50,8 +50,8 @@ def bbox_rel(*xyxy):
 def draw_boxes(img, bbox: np.ndarray, identities=None, categories=None, names=None, offset=(0, 0)):
     """Function to Draw Bounding boxes"""
     filter = lambda b: b[1] + ((b[3] - b[1]) / 2) <= area1_pointA[1]
-    mask = np.apply_along_axis(filter, 0, bbox)
-    identities.astype(int, copy=False)
+    mask = np.apply_along_axis(filter, 1, bbox)
+    identities = identities.astype(int, copy=False)
     bee_ids_true = identities[mask]
     bee_ids_false = identities[~mask]
 
@@ -61,7 +61,7 @@ def draw_boxes(img, bbox: np.ndarray, identities=None, categories=None, names=No
 
     array_ids_C[bee_ids_false] = True
     array_ids_out[bee_ids_false] = np.logical_or(array_ids_out[bee_ids_false], array_ids_A[bee_ids_false])
-    array_ids_A[bee_ids_true] = False
+    array_ids_A[bee_ids_false] = False
 
 
 # ..............................................................................
@@ -235,9 +235,9 @@ def detect(save_img=False):
             org_1 = (100, 180)
             org_2 = (100, 550)
 
-            cv2.putText(im0, 'Bees IN = ' + str(len(array_ids_in)), org_1, font, fontScale, color, thickness,
+            cv2.putText(im0, 'Bees IN = ' + str(np.sum(array_ids_in)), org_1, font, fontScale, color, thickness,
                         cv2.LINE_AA)
-            cv2.putText(im0, 'Bees OUT = ' + str(len(array_ids_out)), org_2, font, fontScale, color, thickness,
+            cv2.putText(im0, 'Bees OUT = ' + str(np.sum(array_ids_out)), org_2, font, fontScale, color, thickness,
                         cv2.LINE_AA)
             # Stream results
             if view_img:
@@ -271,8 +271,8 @@ def detect(save_img=False):
         # print(f"Results saved to {save_dir}{s}")
 
     print(f'Done. ({time.time() - t0:.3f}s)')
-    print(f'Bees In:{len(array_ids_in)}')
-    print(f'Bees Out:{len(array_ids_out)}')
+    print(f'Bees In:{np.sum(array_ids_in)}')
+    print(f'Bees Out:{np.sum(array_ids_out)}')
 
 
 if __name__ == '__main__':
