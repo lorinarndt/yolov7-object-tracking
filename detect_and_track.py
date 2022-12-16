@@ -28,15 +28,10 @@ area1_pointB = (1000, 350)
 
 
 # vehicles total counting variables
-array_ids_A = []
-array_ids_in = []
-array_ids_out = []
-array_ids_C = []
-COUNTING_IN = 0
-modulo_counting_IN = 0
-
-counting_bees_out = 0
-modulo_counting_OUT = 0
+array_ids_A = np.zeros(1000, dtype=bool)
+array_ids_in = np.zeros(1000, dtype=bool)
+array_ids_out = np.zeros(1000, dtype=bool)
+array_ids_C = np.zeros(1000, dtype=bool)
 
 
 def bbox_rel(*xyxy):
@@ -54,35 +49,19 @@ def bbox_rel(*xyxy):
 
 def draw_boxes(img, bbox: np.ndarray, identities=None, categories=None, names=None, offset=(0, 0)):
     """Function to Draw Bounding boxes"""
-    print(bbox)
-    print(identities)
-    for i, box in enumerate(bbox):
-        x1, y1, x2, y2 = [int(i) for i in box]
-        bee_id = int(identities[i]) if identities is not None else 0
+    filter = lambda b: b[1] + ((b[3] - b[1]) / 2) <= area1_pointA[1]
+    mask = np.apply_along_axis(filter, 0, bbox)
+    identities.astype(int, copy=False)
+    bee_ids_true = identities[mask]
+    bee_ids_false = identities[~mask]
 
-        midpoint_y = y1 + ((y2 - y1) / 2)
+    array_ids_A[bee_ids_true] = True
+    array_ids_in[bee_ids_true] = np.logical_or(array_ids_in[bee_ids_true], array_ids_C[bee_ids_true])
+    array_ids_C[bee_ids_true] = False
 
-        if midpoint_y <= area1_pointA[1]:
-            if len(array_ids_A) > 0:
-                if bee_id not in array_ids_A:
-                    array_ids_A.append(bee_id)
-            else:
-                array_ids_A.append(bee_id)
-
-            if bee_id in array_ids_C:
-                array_ids_in.append(bee_id)
-                array_ids_C.remove(bee_id)
-
-        else:
-            if len(array_ids_C) > 0:
-                if bee_id not in array_ids_C:
-                    array_ids_C.append(bee_id)
-            else:
-                array_ids_C.append(bee_id)
-
-            if bee_id in array_ids_A:
-                array_ids_out.append(bee_id)
-                array_ids_A.remove(bee_id)
+    array_ids_C[bee_ids_false] = True
+    array_ids_out[bee_ids_false] = np.logical_or(array_ids_out[bee_ids_false], array_ids_A[bee_ids_false])
+    array_ids_A[bee_ids_true] = False
 
 
 # ..............................................................................
